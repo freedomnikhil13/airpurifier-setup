@@ -368,7 +368,8 @@ async function finish(needRestartForToken) {
     await cmd("@RESTART", "#OK|RESTART");
     await sleep(3000);
     await waitAlive(20000);
-    await waitWifi(40000);
+    const w = await waitWifi(40000);
+    say("m5", w ? `Connected to <b>${escapeHtml(lastStatus ? lastStatus.ssid : "")}</b> ✓` : "WiFi is reconnecting…", w ? "ok" : "warn");
   }
   say("m6", "Checking the connection to Blynk… (up to a minute)");
   let s = null;
