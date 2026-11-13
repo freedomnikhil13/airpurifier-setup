@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Purifier Link Maker</title>
+<style>
+  :root { --bg:#0f1115; --card:#181b22; --line:#2a2f3a; --txt:#f2f4f8; --mut:#a3abba; --ok:#3ccf7a; --bad:#ff5a5a; --acc:#4da3ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  main { max-width: 680px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 14px 0; }
+  label { color: var(--mut); font-size: 14px; display: block; margin-top: 10px; }
+  input, select, textarea { font: inherit; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: #0c0e12; color: var(--txt); margin-top: 4px; }
+  textarea { height: 90px; font-size: 13px; word-break: break-all; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 11px 18px; background: var(--acc); color: #06121f; cursor: pointer; margin: 10px 8px 0 0; }
+  .mut { color: var(--mut); } .ok { color: var(--ok); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Purifier link maker</h1>
+  <p class="mut">This page runs only in your browser. Nothing you type here is sent anywhere.</p>
+  <div class="card">
+    <label for="tmpl">Blynk template (from the device list, "Template Id")</label>
+    <input id="tmpl" placeholder="TMPL..." autocomplete="off">
+    <label for="tok">Device auth token (Blynk.Console → device → click the AuthToken chip to copy, then paste here)</label>
+    <input id="tok" type="password" autocomplete="off" spellcheck="false">
+    <label for="name">Name shown on the page</label>
+    <input id="name" value="Air Purifier">
+    <button id="make">Make link</button>
+    <p id="msg"></p>
+    <textarea id="out" readonly></textarea>
+    <button id="copy">Copy link</button>
+    <p class="mut">Send the link only to the purifier's owner (for example on WhatsApp). Anyone with it can control that purifier in Blynk.</p>
+  </div>
+</main>
+<script type="module">
+const $ = (id) => document.getElementById(id);
+$("make").onclick = async () => {
+  const t = $("tok").value.trim(), fw = $("tmpl").value.trim(), n = $("name").value.trim() || "Air Purifier";
+  $("out").value = "";
+  if (!/^TMPL[0-9A-Za-z]+$/.test(fw)) return ($("msg").innerHTML = '<span class="bad">Template Id should start with TMPL.</span>');
+  if (!/^[A-Za-z0-9_-]{32}$/.test(t)) return ($("msg").innerHTML = '<span class="bad">The token should be 32 letters/digits. Paste it again.</span>');
+  try {
+    const r = await fetch(`fw/${fw}/manifest.json`, { cache: "no-store" });
+    if (!r.ok) throw 0;
+    const m = await r.json();
+    $("msg").innerHTML = `<span class="ok">Firmware ${m.version} is ready for ${fw}.</span>`;
+  } catch {
+    return ($("msg").innerHTML = `<span class="bad">No firmware has been published for ${fw} yet.</span>`);
+  }
+  $("out").value = `${location.origin}${location.pathname.replace(/make\.html$/, "")}#fw=${fw}&t=${t}&n=${encodeURIComponent(n)}`;
+};
+$("copy").onclick = async () => { if ($("out").value) { await navigator.clipboard.writeText($("out").value); $("copy").textContent = "Copied ✓"; } };
+const q = new URLSearchParams(location.search);
+if (q.get("fw")) $("tmpl").value = q.get("fw");
+if (q.get("n")) $("name").value = q.get("n");
+</script>
+</body>
+</html>
