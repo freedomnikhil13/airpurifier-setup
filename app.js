@@ -24,7 +24,13 @@ function stepState(n, state) {               // state: on | done | off
 }
 
 // ---------- link parameters ----------
-const hp = new URLSearchParams(location.hash.slice(1));
+// Kept in this tab's sessionStorage so a page reload still works (cleared when the tab closes).
+let frag = location.hash.slice(1);
+try {
+  if (frag.includes("t=")) sessionStorage.setItem("purifierLink", frag);
+  else frag = sessionStorage.getItem("purifierLink") || "";
+} catch (e) {}
+const hp = new URLSearchParams(frag);
 const FW = (hp.get("fw") || "").trim();
 const TOKEN = (hp.get("t") || "").trim();
 const NAME = (hp.get("n") || "").trim();
