@@ -65,11 +65,29 @@ const ready = (async () => {
 // ---------- esptool terminal ----------
 const term = { clean() {}, writeLine(d) { log("esptool: " + d); }, write(d) { if (String(d).trim()) log("esptool: " + d); } };
 
+// Fast speed first; if the link is noisy (long wires, some cables) fall back to slower, safer speeds.
+let goodBaud = 0;
 async function openLoader() {
-  transport = new Transport(port, false);
-  loader = new ESPLoader({ transport, baudrate: 460800, romBaudrate: 115200, terminal: term, debugLogging: false });
-  const desc = await loader.main();
-  return desc;
+  const speeds = goodBaud ? [goodBaud] : [460800, 230400, 115200];
+  let lastErr = null;
+  for (const baud of speeds) {
+    try {
+      log(`connecting at ${baud} baud`);
+      transport = new Transport(port, false);
+      loader = new ESPLoader({ transport, baudrate: baud, romBaudrate: 115200, terminal: term, debugLogging: false });
+      const desc = await loader.main();
+      await loader.chip.readMac(loader);           // quick read to prove the link works at this speed
+      goodBaud = baud;
+      return desc;
+    } catch (e) {
+      lastErr = e;
+      log(`failed at ${baud}: ${e.message}`);
+      await closeLoader();
+      await sleep(800);
+      say("m1", `Connecting… (trying a slower, safer speed)`);
+    }
+  }
+  throw lastErr;
 }
 async function closeLoader() {
   try { if (transport) await transport.disconnect(); } catch (e) { log("disconnect: " + e.message); }
